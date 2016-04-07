@@ -78,7 +78,6 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
   compiler.plugin('run', function(_, runDone) {
     shouldCompile = true;
 
-
     try {
       pluginContext.readCacheFile();
     } catch (readCacheErr) {

@@ -8,6 +8,12 @@ function digestMD5(content) {
   return md5sum.digest('hex');
 }
 
+function digestSHA1(content) {
+  var sha1sum = crypto.createHash('sha1');
+  sha1sum.update(content);
+  return sha1sum.digest('hex');
+}
+
 function getFilesChanges(filesHashes, concurrencyLimit, done) {
   var changed = [];
   var deleted = [];
@@ -42,6 +48,7 @@ function hasAnyFileChanged(filesHashes, concurrencyLimit, done) {
 }
 
 module.exports = {
+  digestSHA1: digestSHA1,
   digestMD5: digestMD5,
   hasAnyFileChanged: hasAnyFileChanged,
 };

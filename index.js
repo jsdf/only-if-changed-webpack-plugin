@@ -12,7 +12,7 @@ function OnlyIfChangedPlugin(opts) {
   if (!opts.cacheDirectory) throw new Error('missing required opt cacheDirectory');
   if (!opts.cacheIdentifier) throw new Error('missing required opt cacheIdentifier');
   this.cacheDirectory = opts.cacheDirectory;
-  this.cacheIdentifier = opts.cacheIdentifier;
+  this.cacheIdentifier = digest.digestSHA1(JSON.stringify(opts.cacheIdentifier));
   this.concurrencyLimit = opts.concurrencyLimit || CONCURRENCY_LIMIT;
   this.cache = makeCacheRecord();
 }

@@ -8,7 +8,7 @@ function digestMD5(content) {
   return md5sum.digest('hex');
 }
 
-function hasAnyFileChanged(filesHashes, concurrencyLimit, done) {
+function getFilesChanges(filesHashes, concurrencyLimit, done) {
   var changed = [];
   var deleted = [];
   var files = Object.keys(filesHashes);
@@ -21,7 +21,7 @@ function hasAnyFileChanged(filesHashes, concurrencyLimit, done) {
       }
 
       var hashNew = digestMD5(contents);
-      if (!(filesHashes[file] && hashNew && hashNew !== filesHashes[file])) {
+      if (!(filesHashes[file] && hashNew && filesHashes[file] === hashNew)) {
         changed.push(file);
       }
       fileDone();
@@ -29,6 +29,13 @@ function hasAnyFileChanged(filesHashes, concurrencyLimit, done) {
   }
 
   async.eachLimit(files, concurrencyLimit, eachFile, function() {
+    done(deleted, changed);
+  });
+}
+
+
+function hasAnyFileChanged(filesHashes, concurrencyLimit, done) {
+  getFilesChanges(filesHashes, concurrencyLimit, function(deleted, changed) {
     var numFilesChanged = deleted.length + changed.length;
     done(null, numFilesChanged > 0);
   });

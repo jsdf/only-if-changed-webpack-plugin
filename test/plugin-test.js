@@ -6,24 +6,29 @@ var webpack = require('webpack');
 var OnlyIfChangedPlugin = require('../');
 var webpackConfig = require('../support/webpack.config.js');
 var testUtils = require('../support/testUtils');
+var readFile = testUtils.readFile;
+var writeFile = testUtils.writeFile;
+var cleanupTestOutputDir = testUtils.cleanupTestOutputDir;
+var testOutputDir = testUtils.testOutputDir;
+var waitForIOSettle = testUtils.waitForIOSettle;
 
-var entry = path.join(testUtils.testOutputDir, 'entry.js');
+var entry = path.join(testOutputDir, 'entry.js');
 
-test('it builds valid bundles when files change', (t) => {
+test('it rebuilds when input files change', (t) => {
   var bundleFile1 = 'bundle-1.js';
 
-  var dependency1 = path.join(testUtils.testOutputDir, 'stuff.js');
-  var dependency2 = path.join(testUtils.testOutputDir, 'stuff2.js');
+  var dependency1 = path.join(testOutputDir, 'stuff.js');
+  var dependency2 = path.join(testOutputDir, 'stuff2.js');
   var inputContent1 = 'console.log("123")';
   var inputContent2 = 'console.log("567")';
 
-  testUtils.cleanupTestOutputDir((cleanupErr) => {
+  cleanupTestOutputDir((cleanupErr) => {
     t.notOk(cleanupErr, 'clean up test output dir');
 
     writeFile(entry, `require('${dependency1}');`);
     writeFile(dependency1, inputContent1);
     writeFile(dependency2, inputContent2);
-    var bundleOutputFile = path.join(testUtils.testOutputDir, bundleFile1);
+    var bundleOutputFile = path.join(testOutputDir, bundleFile1);
 
     doBuild(bundleFile1, (build1Err) => {
       t.notOk(build1Err, 'built first time');
@@ -31,11 +36,14 @@ test('it builds valid bundles when files change', (t) => {
       var output1 = readFile(bundleOutputFile);
       t.match(output1, inputContent1, 'built bundle containing initial content');
 
-      fs.unlinkSync(bundleOutputFile);
+      var mtime1 = fs.statSync(bundleOutputFile).mtime.getTime();
 
       writeFile(entry, `require('${dependency2}');`);
       doBuild(bundleFile1, build2err => {
         t.notOk(build2err, 'built second time');
+
+        var mtime2 = fs.statSync(bundleOutputFile).mtime.getTime();
+        t.ok(mtime1 !== mtime2, 'does rebuild files');
 
         var output2 = readFile(bundleOutputFile);
         t.match(output2, inputContent2, 'built bundle containing changed content');
@@ -46,17 +54,17 @@ test('it builds valid bundles when files change', (t) => {
   });
 });
 
-test('it does not rebuild when files do not change', (t) => {
+test('it rebuilds when output files change', (t) => {
   var bundleFile1 = 'bundle-1.js';
-  var dependency1 = path.join(testUtils.testOutputDir, 'stuff.js');
+  var dependency1 = path.join(testOutputDir, 'stuff.js');
   var inputContent1 = 'console.log("123")';
 
-  testUtils.cleanupTestOutputDir((cleanupErr) => {
+  cleanupTestOutputDir((cleanupErr) => {
     t.notOk(cleanupErr, 'clean up test output dir');
 
     writeFile(entry, `require('${dependency1}');`);
     writeFile(dependency1, inputContent1);
-    var bundleOutputFile = path.join(testUtils.testOutputDir, bundleFile1);
+    var bundleOutputFile = path.join(testOutputDir, bundleFile1);
     doBuild(bundleFile1, (build1Err) => {
       t.notOk(build1Err, 'built first time');
 
@@ -68,7 +76,7 @@ test('it does not rebuild when files do not change', (t) => {
       doBuild(bundleFile1, build2Err => {
         t.notOk(build2Err, 'built second time');
 
-        t.notOk(fs.existsSync(bundleOutputFile), 'does not rebuild files');
+        t.ok(fs.existsSync(bundleOutputFile), 'does rebuild files');
 
         t.end();
       });
@@ -76,29 +84,36 @@ test('it does not rebuild when files do not change', (t) => {
   });
 });
 
-var READ_FILE_TIMEOUT = 2000;
-function readFile(filepath) {
-  var start = Date.now();
-  var contents = null;
-  var outOfTime = false;
-  while (!outOfTime) {
-    try {
-      contents = fs.readFileSync(filepath, {encoding: 'utf8'});
-    } catch (err) {
-      // file doesn't exist yet
-    }
-    outOfTime = Date.now() > start + READ_FILE_TIMEOUT;
-  }
+test('it does not rebuild when input and output files do not change', (t) => {
+  var bundleFile1 = 'bundle-1.js';
+  var dependency1 = path.join(testOutputDir, 'stuff.js');
+  var inputContent1 = 'console.log("123")';
 
-  if (contents == null) {
-    throw new Error('Timeout waiting for file read');
-  }
-  return contents;
-}
+  cleanupTestOutputDir((cleanupErr) => {
+    t.notOk(cleanupErr, 'clean up test output dir');
 
-function writeFile(filepath, content) {
-  fs.writeFileSync(filepath, content, {encoding: 'utf8'});
-}
+    writeFile(entry, `require('${dependency1}');`);
+    writeFile(dependency1, inputContent1);
+    var bundleOutputFile = path.join(testOutputDir, bundleFile1);
+    doBuild(bundleFile1, (build1Err) => {
+      t.notOk(build1Err, 'built first time');
+
+      var output1 = readFile(bundleOutputFile);
+      t.match(output1, inputContent1, 'built bundle containing initial content');
+
+      var mtime1 = fs.statSync(bundleOutputFile).mtime.getTime();
+
+      doBuild(bundleFile1, build2Err => {
+        t.notOk(build2Err, 'built second time');
+
+        var mtime2 = fs.statSync(bundleOutputFile).mtime.getTime();
+        t.ok(mtime1 === mtime2, 'does not rebuild files');
+
+        t.end();
+      });
+    });
+  });
+});
 
 function doBuild(filename, done) {
   webpackConfig.entry = entry;
@@ -106,7 +121,7 @@ function doBuild(filename, done) {
   webpackConfig.output.filename = filename;
   webpackConfig.plugins = [
     new OnlyIfChangedPlugin({
-      cacheDirectory: testUtils.testOutputDir,
+      cacheDirectory: testOutputDir,
       cacheIdentifier: 'cache',
     }),
   ];
@@ -123,6 +138,6 @@ function doBuild(filename, done) {
       console.error.apply(console, jsonStats.warnings);
     }
 
-    testUtils.waitForIOSettle(done);
+    waitForIOSettle(done);
   });
 }

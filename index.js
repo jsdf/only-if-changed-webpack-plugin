@@ -31,7 +31,7 @@ OnlyIfChangedPlugin.prototype.readCacheFile = function() {
 
 OnlyIfChangedPlugin.prototype.updateDependenciesMtimes = function(fileDependencies, done) {
   var pluginContext = this;
-  mtime.getFilesMtimes(fileDependencies, function(err, filesMtimes) {
+  mtime.getFilesMtimes(fileDependencies, this.concurrencyLimit, function(err, filesMtimes) {
     if (err) return done(err);
 
     // merge in updated mtimes
@@ -62,7 +62,7 @@ OnlyIfChangedPlugin.prototype.hasAnyFileChanged = function(done) {
 
     digest.hasAnyFileChanged(pluginContext.cache.outputFilesHashes, pluginContext.concurrencyLimit, function(err, anyHashChanged) {
       if (err) return done(err);
-      if (anyHashChanged) return done(null, true);
+      done(null, anyHashChanged);
     });
   });
 };
@@ -77,6 +77,7 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
   // at the very start of the webpack run we determine if we need to rebuild or not
   compiler.plugin('run', function(_, runDone) {
     shouldCompile = true;
+
 
     try {
       pluginContext.readCacheFile();
@@ -105,6 +106,7 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
         pluginContext.cache = makeCacheRecord();
       }
 
+
       runDone();
     });
   });
@@ -131,7 +133,7 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
 
   // collect info about output of compilation
   compiler.plugin('after-emit', function(compilation, done) {
-    if (!shouldCompile) return;
+    if (!shouldCompile) return done();
 
     var emittedFiles = Object.keys(compilation.assets).filter(function(file) {
       var source = compilation.assets[file];

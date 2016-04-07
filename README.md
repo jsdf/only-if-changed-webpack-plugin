@@ -29,5 +29,6 @@ module.exports = {
 };
 ```
 
-After an initial build, all subsequent builds will skip compiling and emitting 
-assets until a dependent file or output asset of the build is modified or deleted.
+After a successful build, all subsequent builds will skip compiling and emitting 
+assets unless an input file dependency or output asset of the build has been 
+modified or deleted.

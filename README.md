@@ -7,6 +7,7 @@ Webpack plugin to only run build if dependent files have changed
 
 ```js
 var path = require('path');
+var OnlyIfChangedPlugin = require('only-if-changed-webpack-plugin');
 
 var opts = {
   rootDir: process.cwd(),
@@ -30,4 +31,3 @@ module.exports = {
 
 After an initial build, all subsequent builds will skip compiling and emitting 
 assets until a dependent file or output asset of the build is modified or deleted.
-

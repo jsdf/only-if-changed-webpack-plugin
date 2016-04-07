@@ -1,7 +1,8 @@
 var fs = require('fs');
 var async = require('async');
 
-function updateMtimes(files, filesMtimes, done) {
+function getFilesMtimes(files, done) {
+  var filesMtimes = {};
   async.forEach(files, function(file, fileDone) {
     fs.stat(file, function(statErr, stat) {
       if (statErr) {
@@ -12,7 +13,10 @@ function updateMtimes(files, filesMtimes, done) {
       filesMtimes[file] = stat.mtime.getTime();
       fileDone();
     });
-  }, done);
+  }, function(err) {
+    if (err) return done(err);
+    done(null, filesMtimes);
+  });
 }
 
 function hasAnyFileChanged(filesMtimes, concurrencyLimit, done) {
@@ -31,7 +35,6 @@ function hasAnyFileChanged(filesMtimes, concurrencyLimit, done) {
       if (!(filesMtimes[file] && mtimeNew && mtimeNew <= filesMtimes[file])) {
         changed.push(file);
       }
-      filesMtimes[file] = mtimeNew;
       fileDone();
     });
   }
@@ -43,6 +46,6 @@ function hasAnyFileChanged(filesMtimes, concurrencyLimit, done) {
 }
 
 module.exports = {
-  updateMtimes: updateMtimes,
+  getFilesMtimes: getFilesMtimes,
   hasAnyFileChanged: hasAnyFileChanged,
 };

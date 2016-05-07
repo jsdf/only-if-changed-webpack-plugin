@@ -35,5 +35,5 @@ modified or deleted.
 
 ### See also
 
-- [cached-loader](https://github.com/jsdf/cached-loader)
+- [cached-loader](https://github.com/jsdf/cached-loader) – Adds persistent on-disk caching to webpack loaders
 

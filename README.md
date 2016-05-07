@@ -32,3 +32,8 @@ module.exports = {
 After a successful build, all subsequent builds will skip compiling and emitting 
 assets unless an input file dependency or output asset of the build has been 
 modified or deleted.
+
+### See also
+
+- [cached-loader](https://github.com/jsdf/cached-loader)
+

@@ -32,7 +32,7 @@ function getFilesChanges(filesMtimes, concurrencyLimit, done) {
       }
 
       var mtimeNew = stat.mtime.getTime();
-      if (!(filesMtimes[file] && mtimeNew && mtimeNew <= filesMtimes[file])) {
+      if (mtimeNew > Number(filesMtimes[file])) {
         changed.push(file);
       }
       fileDone();

@@ -84,35 +84,74 @@ test('it rebuilds when output files change', (t) => {
   });
 });
 
-test('it does not rebuild when input and output files do not change', (t) => {
-  var bundleFile1 = 'bundle-1.js';
-  var dependency1 = path.join(testOutputDir, 'stuff.js');
-  var inputContent1 = 'console.log("123")';
+test('when input and output files do not change', (t) => {
+  var test = t.test;
 
-  cleanupTestOutputDir((cleanupErr) => {
-    t.notOk(cleanupErr, 'clean up test output dir');
+  test('it does not rebuild', (t) => {
+    var bundleFile1 = 'bundle-1.js';
+    var dependency1 = path.join(testOutputDir, 'stuff.js');
+    var inputContent1 = 'console.log("123")';
 
-    writeFile(entry, `require('${dependency1}');`);
-    writeFile(dependency1, inputContent1);
-    var bundleOutputFile = path.join(testOutputDir, bundleFile1);
-    doBuild(bundleFile1, (build1Err) => {
-      t.notOk(build1Err, 'built first time');
+    cleanupTestOutputDir((cleanupErr) => {
+      t.notOk(cleanupErr, 'clean up test output dir');
 
-      var output1 = readFile(bundleOutputFile);
-      t.match(output1, inputContent1, 'built bundle containing initial content');
+      writeFile(entry, `require('${dependency1}');`);
+      writeFile(dependency1, inputContent1);
+      var bundleOutputFile = path.join(testOutputDir, bundleFile1);
+      doBuild(bundleFile1, (build1Err) => {
+        t.notOk(build1Err, 'built first time');
 
-      var mtime1 = fs.statSync(bundleOutputFile).mtime.getTime();
+        var output1 = readFile(bundleOutputFile);
+        t.match(output1, inputContent1, 'built bundle containing initial content');
 
-      doBuild(bundleFile1, build2Err => {
-        t.notOk(build2Err, 'built second time');
+        var mtime1 = fs.statSync(bundleOutputFile).mtime.getTime();
 
-        var mtime2 = fs.statSync(bundleOutputFile).mtime.getTime();
-        t.ok(mtime1 === mtime2, 'does not rebuild files');
+        doBuild(bundleFile1, build2Err => {
+          t.notOk(build2Err, 'built second time');
 
-        t.end();
+          var mtime2 = fs.statSync(bundleOutputFile).mtime.getTime();
+          t.ok(mtime1 === mtime2, 'does not rebuild files');
+
+          t.end();
+        });
       });
     });
   });
+
+  test('it does not rebuild when a file has Epoch timestamp', (t) => {
+    // see https://github.com/npm/npm/issues/19968#issuecomment-372799983 for why we need to support this
+
+    var bundleFile1 = 'bundle-1.js';
+    var dependency1 = path.join(testOutputDir, 'stuff.js');
+    var inputContent1 = 'console.log("123")';
+
+    cleanupTestOutputDir((cleanupErr) => {
+      t.notOk(cleanupErr, 'clean up test output dir');
+
+      writeFile(entry, `require('${dependency1}');`);
+      writeFile(dependency1, inputContent1, 0); // zero timestamp
+      var bundleOutputFile = path.join(testOutputDir, bundleFile1);
+      doBuild(bundleFile1, (build1Err) => {
+        t.notOk(build1Err, 'built first time');
+
+        var output1 = readFile(bundleOutputFile);
+        t.match(output1, inputContent1, 'built bundle containing initial content');
+
+        var mtime1 = fs.statSync(bundleOutputFile).mtime.getTime();
+
+        doBuild(bundleFile1, build2Err => {
+          t.notOk(build2Err, 'built second time');
+
+          var mtime2 = fs.statSync(bundleOutputFile).mtime.getTime();
+          t.ok(mtime1 === mtime2, 'does not rebuild files');
+
+          t.end();
+        });
+      });
+    });
+  });
+
+  t.end();
 });
 
 function doBuild(filename, done) {

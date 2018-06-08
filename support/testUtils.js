@@ -54,8 +54,12 @@ function readFile(filepath) {
   return contents;
 }
 
-function writeFile(filepath, content) {
+function writeFile(filepath, content, unixtime) {
   fs.writeFileSync(filepath, content, {encoding: 'utf8'});
+
+  if (typeof unixtime !== 'undefined') {
+    fs.utimesSync(filepath, unixtime, unixtime);
+  }
 }
 
 module.exports = {

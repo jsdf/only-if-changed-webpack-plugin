@@ -7,7 +7,7 @@ function getFilesMtimes(files, concurrencyLimit, done) {
     if (typeof file !== 'string') {
       return fileDone();
     }
-    
+
     fs.stat(file, function(statErr, stat) {
       if (statErr) {
         if (statErr.code === 'ENOENT') return fileDone();

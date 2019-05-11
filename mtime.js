@@ -4,6 +4,10 @@ var async = require('async');
 function getFilesMtimes(files, concurrencyLimit, done) {
   var filesMtimes = {};
   async.eachLimit(files, concurrencyLimit, function(file, fileDone) {
+    if (typeof file !== 'string') {
+      return fileDone();
+    }
+
     fs.stat(file, function(statErr, stat) {
       if (statErr) {
         if (statErr.code === 'ENOENT') return fileDone();

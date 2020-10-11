@@ -129,8 +129,11 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
 
   // collect info about input dependencies to compilation
   compiler.plugin('after-compile', function(compilation, afterCompileDone) {
+    // convert to array in case webpack gives us a set (in webpack v4)
+    var fileDependencies = Array.from(compilation.fileDependencies);
+
     // get updated mtimes of file dependencies of compilation
-    pluginContext.updateDependenciesMtimes(compilation.fileDependencies, afterCompileDone);
+    pluginContext.updateDependenciesMtimes(fileDependencies, afterCompileDone);
   });
 
   compiler.plugin('should-emit', function() {

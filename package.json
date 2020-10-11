@@ -1,24 +1,25 @@
 {
-  "name": "only-if-changed-webpack-plugin",
-  "version": "0.0.2",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "npm run lint && npm run tap",
-    "tap": "tap test",
-    "lint": "eslint .",
-    "lint-fix": "eslint . --fix"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "async": "^1.5.2",
-    "mkdirp": "^0.5.1"
-  },
-  "devDependencies": {
-    "eslint": "^2.7.0",
-    "rimraf": "^2.5.2",
-    "tap": "^5.7.0",
-    "webpack": "^1.12.14"
-  }
+    "name": "only-if-changed-webpack-plugin",
+    "version": "0.0.2",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "npm run lint && npm run tap",
+        "tap": "tap test",
+        "lint": "prettier --check ./**/*.js && eslint ./**/*.js",
+        "lint-fix": "eslint --fix ./**/*.js && prettier --write ./**/*.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "async": "^1.5.2",
+        "mkdirp": "^0.5.1"
+    },
+    "devDependencies": {
+        "eslint": "^2.7.0",
+        "prettier": "^2.1.2",
+        "rimraf": "^2.5.2",
+        "tap": "^5.7.0",
+        "webpack": "^4.44.2"
+    }
 }

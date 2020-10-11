@@ -10,72 +10,95 @@ var SCHEMA_VERSION = 1;
 var CONCURRENCY_LIMIT = 40;
 
 function OnlyIfChangedPlugin(opts) {
-  if (!opts.cacheDirectory) throw new Error('missing required opt cacheDirectory');
-  if (!opts.cacheIdentifier) throw new Error('missing required opt cacheIdentifier');
+  if (!opts.cacheDirectory)
+    throw new Error('missing required opt cacheDirectory');
+  if (!opts.cacheIdentifier)
+    throw new Error('missing required opt cacheIdentifier');
   this.cacheDirectory = opts.cacheDirectory;
-  this.cacheIdentifier = digest.digestSHA1(JSON.stringify(opts.cacheIdentifier));
+  this.cacheIdentifier = digest.digestSHA1(
+    JSON.stringify(opts.cacheIdentifier)
+  );
   this.concurrencyLimit = opts.concurrencyLimit || CONCURRENCY_LIMIT;
   this.cache = makeCacheRecord();
   this.makeCacheDirectory();
 }
 
-OnlyIfChangedPlugin.prototype.makeCacheDirectory = function() {
-  mkdirp(this.cacheDirectory, function(err) {
+OnlyIfChangedPlugin.prototype.makeCacheDirectory = function () {
+  mkdirp(this.cacheDirectory, function (err) {
     if (err) console.error(err);
   });
 };
 
-OnlyIfChangedPlugin.prototype.getCacheFilePath = function() {
-  return path.join(this.cacheDirectory, 'onlyifchanged-' + SCHEMA_VERSION + '-' + this.cacheIdentifier + '.json');
+OnlyIfChangedPlugin.prototype.getCacheFilePath = function () {
+  return path.join(
+    this.cacheDirectory,
+    'onlyifchanged-' + SCHEMA_VERSION + '-' + this.cacheIdentifier + '.json'
+  );
 };
 
-OnlyIfChangedPlugin.prototype.writeCacheFile = function() {
+OnlyIfChangedPlugin.prototype.writeCacheFile = function () {
   fs.writeFileSync(this.getCacheFilePath(), JSON.stringify(this.cache));
 };
 
-OnlyIfChangedPlugin.prototype.readCacheFile = function() {
-  this.cache = JSON.parse(fs.readFileSync(this.getCacheFilePath(), {encoding: 'utf8'}));
+OnlyIfChangedPlugin.prototype.readCacheFile = function () {
+  this.cache = JSON.parse(
+    fs.readFileSync(this.getCacheFilePath(), {encoding: 'utf8'})
+  );
 };
 
-OnlyIfChangedPlugin.prototype.updateDependenciesMtimes = function(fileDependencies, done) {
+OnlyIfChangedPlugin.prototype.updateDependenciesMtimes = function (
+  fileDependencies,
+  done
+) {
   var pluginContext = this;
-  mtime.getFilesMtimes(fileDependencies, this.concurrencyLimit, function(err, filesMtimes) {
+  mtime.getFilesMtimes(fileDependencies, this.concurrencyLimit, function (
+    err,
+    filesMtimes
+  ) {
     if (err) return done(err);
 
     // merge in updated mtimes
-    Object.keys(filesMtimes).forEach(function(file) {
+    Object.keys(filesMtimes).forEach(function (file) {
       pluginContext.cache.inputFilesMtimes[file] = filesMtimes[file];
     });
     done();
   });
 };
 
-OnlyIfChangedPlugin.prototype.updateAssetHash = function(file, contents) {
+OnlyIfChangedPlugin.prototype.updateAssetHash = function (file, contents) {
   this.cache.outputFilesHashes[file] = digest.digestMD5(contents);
 };
 
-OnlyIfChangedPlugin.prototype.isCacheEmpty = function() {
+OnlyIfChangedPlugin.prototype.isCacheEmpty = function () {
   return (
     Object.keys(this.cache.inputFilesMtimes).length === 0 ||
     Object.keys(this.cache.outputFilesHashes).length === 0
   );
 };
 
-OnlyIfChangedPlugin.prototype.hasAnyFileChanged = function(done) {
+OnlyIfChangedPlugin.prototype.hasAnyFileChanged = function (done) {
   var pluginContext = this;
 
-  mtime.hasAnyFileChanged(pluginContext.cache.inputFilesMtimes, pluginContext.concurrencyLimit, function(err, anyMtimeChanged) {
-    if (err) return done(err);
-    if (anyMtimeChanged) return done(null, true);
-
-    digest.hasAnyFileChanged(pluginContext.cache.outputFilesHashes, pluginContext.concurrencyLimit, function(err, anyHashChanged) {
+  mtime.hasAnyFileChanged(
+    pluginContext.cache.inputFilesMtimes,
+    pluginContext.concurrencyLimit,
+    function (err, anyMtimeChanged) {
       if (err) return done(err);
-      done(null, anyHashChanged);
-    });
-  });
+      if (anyMtimeChanged) return done(null, true);
+
+      digest.hasAnyFileChanged(
+        pluginContext.cache.outputFilesHashes,
+        pluginContext.concurrencyLimit,
+        function (err, anyHashChanged) {
+          if (err) return done(err);
+          done(null, anyHashChanged);
+        }
+      );
+    }
+  );
 };
 
-OnlyIfChangedPlugin.prototype.apply = function(compiler) {
+OnlyIfChangedPlugin.prototype.apply = function (compiler) {
   var pluginContext = this;
 
   // upvar tracking whether for a particular webpack run, compilation should be done
@@ -83,7 +106,7 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
   var shouldCompile = true;
 
   // at the very start of the webpack run we determine if we need to rebuild or not
-  compiler.plugin('run', function(_, runDone) {
+  compiler.plugin('run', function (_, runDone) {
     shouldCompile = true;
 
     try {
@@ -97,7 +120,7 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
       return runDone(readCacheErr);
     }
 
-    pluginContext.hasAnyFileChanged(function(err, anyChanged) {
+    pluginContext.hasAnyFileChanged(function (err, anyChanged) {
       if (err) return runDone(err);
 
       // rebuild if any file changed
@@ -113,22 +136,21 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
         pluginContext.cache = makeCacheRecord();
       }
 
-
       runDone();
     });
   });
 
-  compiler.plugin('compilation', function(compilation) {
+  compiler.plugin('compilation', function (compilation) {
     if (!shouldCompile) {
       // duck punch compilation object to make addEntry a no-op (ignore all entrypoints)
-      compilation.addEntry = function(context, entry, name, done) {
+      compilation.addEntry = function (context, entry, name, done) {
         done();
       };
     }
   });
 
   // collect info about input dependencies to compilation
-  compiler.plugin('after-compile', function(compilation, afterCompileDone) {
+  compiler.plugin('after-compile', function (compilation, afterCompileDone) {
     // convert to array in case webpack gives us a set (in webpack v4)
     var fileDependencies = Array.from(compilation.fileDependencies);
 
@@ -136,24 +158,26 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
     pluginContext.updateDependenciesMtimes(fileDependencies, afterCompileDone);
   });
 
-  compiler.plugin('should-emit', function() {
+  compiler.plugin('should-emit', function () {
     // don't emit any files if nothing was built
     return shouldCompile;
   });
 
   // collect info about output of compilation
-  compiler.plugin('after-emit', function(compilation, done) {
+  compiler.plugin('after-emit', function (compilation, done) {
     if (!shouldCompile) return done();
 
-    var emittedFiles = Object.keys(compilation.assets).filter(function(file) {
+    var emittedFiles = Object.keys(compilation.assets).filter(function (file) {
       var source = compilation.assets[file];
       return source.emitted && source.existsAt;
     });
 
-    emittedFiles.forEach(function(file) {
+    emittedFiles.forEach(function (file) {
       var source = compilation.assets[file];
       var content = source.source();
-      var contentToHash = Buffer.isBuffer(content) ? content : new Buffer(content, 'utf-8');
+      var contentToHash = Buffer.isBuffer(content)
+        ? content
+        : new Buffer(content, 'utf-8');
 
       pluginContext.updateAssetHash(source.existsAt, contentToHash);
     });
@@ -161,7 +185,7 @@ OnlyIfChangedPlugin.prototype.apply = function(compiler) {
     done();
   });
 
-  compiler.plugin('done', function() {
+  compiler.plugin('done', function () {
     if (!shouldCompile) return;
 
     pluginContext.writeCacheFile();

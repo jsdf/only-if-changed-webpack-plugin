@@ -9,6 +9,10 @@
         "lint": "prettier --check ./**/*.js && eslint ./**/*.js",
         "lint-fix": "eslint --fix ./**/*.js && prettier --write ./**/*.js"
     },
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/jsdf/only-if-changed-webpack-plugin.git",
+    },
     "author": "",
     "license": "ISC",
     "dependencies": {
